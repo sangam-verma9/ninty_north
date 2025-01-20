@@ -1,0 +1,122 @@
+
+{% load static %}
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chat App{% endblock %}</title>
+    {% tailwind_css %}
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 h-full flex flex-col dark:bg-gray-900 transition-colors duration-300">
+    <div class="min-h-full">
+        {% block navheader %}
+        {% include 'includes/navbar.html' %}
+        {% endblock %}
+    
+        <div class="flex h-[calc(100vh-4rem)] pt-16">
+            <!-- Left Sidebar -->
+            <div class="hidden md:flex md:w-64 lg:w-72 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300 ease-in-out overflow-hidden">
+                <div class="w-full">
+                    {% block leftsidebar %}
+                        {% include 'includes/leftsidebar.html' %}
+                    {% endblock %}
+                </div>
+            </div>
+            
+            <!-- Mobile Sidebar Toggle -->
+            <div class="fixed bottom-4 left-4 md:hidden z-50">
+                <button id="mobileSidebarToggle" class="bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition-colors">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                {% block content %}{% endblock %}
+                </div>
+            </main>
+            
+            <!-- Right Sidebar -->
+            <div class="hidden lg:flex lg:w-64 xl:w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                <div class="w-full">
+                    {% block rightsidebar %}
+                        {% include 'includes/rightsidebar.html' %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile Sidebar -->
+    <div id="mobileSidebar" class="fixed inset-0 z-40 hidden">
+        <div class="absolute inset-0 bg-gray-600 opacity-75"></div>
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-gray-800">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button id="closeMobileSidebar" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <span class="sr-only">Close sidebar</span>
+                    <i class="fas fa-times text-white"></i>
+                </button>
+            </div>
+            <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                {% block mobile_sidebar %}
+                    {% include 'includes/leftsidebar.html' %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50"></div>
+
+    {% block modal %}{% endblock %}
+
+    <script>
+        // Mobile sidebar toggle
+        const mobileSidebar = document.getElementById('mobileSidebar');
+        const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
+        const closeMobileSidebar = document.getElementById('closeMobileSidebar');
+
+        function toggleMobileSidebar() {
+            mobileSidebar.classList.toggle('hidden');
+        }
+
+        mobileSidebarToggle.addEventListener('click', toggleMobileSidebar);
+        closeMobileSidebar.addEventListener('click', toggleMobileSidebar);
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+        }
+
+        // Initialize dark mode from localStorage
+        if (localStorage.getItem('darkMode') === 'true' || 
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            
+            toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-3 transform transition-all duration-300 ease-in-out`;
+            toast.textContent = message;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

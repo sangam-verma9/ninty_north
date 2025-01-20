@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+
+{% block title %}Welcome to Chat App{% endblock %}
+
+{% block extra_css %}
+<style>
+    .toast-enter {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    .toast-enter-active {
+        transform: translateX(0);
+        opacity: 1;
+        transition: all 300ms ease-out;
+    }
+    .toast-exit {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    .toast-exit-active {
+        transform: translateX(100%);
+        opacity: 0;
+        transition: all 300ms ease-in;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {% if user.is_authenticated %}
+            <div class="space-y-8">
+                <div class="relative">
+                    <div class="w-24 h-24 mx-auto rounded-full bg-blue-500 flex items-center justify-center text-white text-4xl font-bold">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <div class="absolute -bottom-2 right-1/2 transform translate-x-[4rem] bg-green-400 w-4 h-4 rounded-full border-2 border-white"></div>
+                </div>
+                
+                <div class="space-y-4">
+                    <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl">
+                        Welcome back, {{ user.username }}!
+                    </h1>
+                    <p class="text-xl text-gray-500 dark:text-gray-400">
+                        Start chatting with your friends and colleagues in real-time.
+                    </p>
+                </div>
+
+                <div class="mt-8 flex justify-center space-x-6">
+                    <a href="{% url 'chat:home' %}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-comments mr-2"></i>
+                        Start Chatting
+                    </a>
+                    <button onclick="toggleDarkMode()" class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-moon mr-2"></i>
+                        Toggle Theme
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-12">
+                    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-users text-blue-500 text-3xl"></i>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                            Online Users
+                                        </dt>
+                                        <dd class="flex items-baseline">
+                                            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
+                                                {{ online_users_count|default:"0" }}
+                                            </div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-envelope text-green-500 text-3xl"></i>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                            Messages Today
+                                        </dt>
+                                        <dd class="flex items-baseline">
+                                            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
+                                                {{ messages_today|default:"0" }}
+                                            </div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg sm:col-span-2 lg:col-span-1">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-clock text-purple-500 text-3xl"></i>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                            Last Active
+                                        </dt>
+                                        <dd class="flex items-baseline">
+                                            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
+                                                {{ last_active|default:"Just now" }}
+                                            </div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="space-y-8">
+                <div class="space-y-4">
+                    <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl">
+                        Welcome to Chat App
+                    </h1>
+                    <p class="text-xl text-gray-500 dark:text-gray-400">
+                        Connect with friends and colleagues in real-time with our modern chat application.
+                    </p>
+                </div>
+
+                <div class="mt-8 flex justify-center space-x-6">
+                    <a href="{% url 'accounts:login' %}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Login
+                    </a>
+                    <a href="{% url 'accounts:register' %}" class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        Register
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mt-12">
+                    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5">
+                        <div class="text-center">
+                            <div class="flex justify-center">
+                                <i class="fas fa-bolt text-yellow-500 text-3xl mb-4"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Real-time Chat</h3>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                Instant messaging with real-time updates
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5">
+                        <div class="text-center">
+                            <div class="flex justify-center">
+                                <i class="fas fa-paint-brush text-pink-500 text-3xl mb-4"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Modern Design</h3>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                Beautiful and responsive user interface
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5">
+                        <div class="text-center">
+                            <div class="flex justify-center">
+                                <i class="fas fa-shield-alt text-green-500 text-3xl mb-4"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Secure</h3>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                Safe and private conversations
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- <script>
+    // Wait for the DOM and layout.html scripts to load
+    window.addEventListener('load', function() {
+        {% if messages %}
+            {% for message in messages %}
+                setTimeout(function() {
+                    if (typeof showToast === 'function') {
+                        {% if message.tags %}
+                            showToast("{{ message|escapejs }}", "{{ message.tags|escapejs }}");
+                        {% else %}
+                            showToast("{{ message|escapejs }}", "info");
+                        {% endif %}
+                    } else {
+                        console.warn('showToast function not found');
+                    }
+                }, 100); // Small delay to ensure showToast is defined
+            {% endfor %}
+        {% endif %}
+    });
+
+    // Additional index page specific JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any index-specific JavaScript here
+    });
+</script> -->
+{% endblock %}

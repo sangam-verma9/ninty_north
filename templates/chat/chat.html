@@ -1,0 +1,416 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Chat Room{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-message-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+    }
+    .message-appear {
+        animation: messageAppear 0.3s ease-out;
+    }
+    @keyframes messageAppear {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 1rem;
+    }
+    .typing-dot {
+        width: 4px;
+        height: 4px;
+        margin: 0 1px;
+        background: currentColor;
+        border-radius: 50%;
+        animation: typingAnimation 1.4s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingAnimation {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+    }
+</style>
+{% endblock %}
+
+{% block leftsidebar %}
+<div class="h-full flex flex-col bg-white dark:bg-gray-800">
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Users</h2>
+            <span class="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-200">
+                {{ users|length }} Online
+            </span>
+        </div>
+        <div class="mt-2">
+            <div class="relative">
+                <input type="text" id="userSearch" placeholder="Search users..." 
+                    class="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <i class="fas fa-search absolute right-3 top-2.5 text-gray-400"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-3 space-y-2" id="usersList">
+        {% for user in users %}
+        <div class="user-item group cursor-pointer p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200" 
+             data-user-id="{{ user.id }}">
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white text-xl font-semibold">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full dark:border-gray-800"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                        {{ user.username }}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="status-{{ user.id }}">
+                        Online
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+    <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <div id="selectedUserAvatar" class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <h2 id="chatWith" class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Select a user to start chatting
+                </h2>
+                <p id="userStatus" class="text-sm text-gray-500 dark:text-gray-400">
+                    No user selected
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleDarkMode()" class="p-2 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button id="clearChat" class="p-2 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chatMessages">
+        <div class="flex justify-center">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-2">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">
+                    Select a user from the left to start a conversation
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        <form id="chatForm" class="hidden">
+            <div class="flex items-center space-x-2">
+                <div class="flex-1 relative">
+                    <input type="text" id="messageInput" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                           placeholder="Type your message...">
+                    <div id="typingIndicator" class="absolute left-4 bottom-full mb-2 hidden">
+                        <div class="typing-indicator text-gray-600 dark:text-gray-300">
+                            <span class="typing-dot"></span>
+                            <span class="typing-dot"></span>
+                            <span class="typing-dot"></span>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:hover:bg-blue-800">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Send
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let chatSocket = null;
+    let selectedUserId = null;
+    let typingTimeout = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_DELAY = 3000; // 3 seconds
+
+    // User search functionality
+    document.getElementById('userSearch').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('.user-item').forEach(item => {
+            const username = item.querySelector('.text-sm').textContent.toLowerCase();
+            item.style.display = username.includes(searchTerm) ? 'block' : 'none';
+        });
+    });
+
+    // Clear chat functionality
+    document.getElementById('clearChat').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the chat?')) {
+            document.getElementById('chatMessages').innerHTML = '';
+        }
+    });
+
+    function connectWebSocket(userId) {
+        if (chatSocket && chatSocket.readyState !== WebSocket.CLOSED) {
+            chatSocket.close();
+        }
+
+        const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsUrl = `${wsScheme}://${window.location.host}/ws/chat/${userId}/`;
+        
+        try {
+            chatSocket = new WebSocket(wsUrl);
+            
+            chatSocket.onopen = function() {
+                console.log('WebSocket connected');
+                reconnectAttempts = 0;
+                showToast('Connected to chat', 'success');
+                document.getElementById(`status-${userId}`).textContent = 'Online';
+            };
+
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                
+                if (data.type === 'typing') {
+                    handleTypingStatus(data);
+                } else if (data.type === 'message') {
+                    displayMessage(data.message, data.sender_id === '{{ request.user.id }}', data.timestamp);
+                }
+            };
+
+            chatSocket.onclose = function(e) {
+                console.log('WebSocket closed:', e.reason);
+                document.getElementById(`status-${userId}`).textContent = 'Offline';
+                
+                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    showToast('Connection lost. Reconnecting...', 'warning');
+                    reconnectAttempts++;
+                    setTimeout(() => connectWebSocket(userId), RECONNECT_DELAY);
+                } else {
+                    showToast('Could not reconnect. Please refresh the page.', 'error');
+                }
+            };
+
+            chatSocket.onerror = function(e) {
+                console.error('WebSocket error:', e);
+                showToast('Connection error', 'error');
+            };
+        } catch (error) {
+            console.error('WebSocket connection error:', error);
+            showToast('Failed to connect', 'error');
+        }
+    }
+
+    document.querySelectorAll('.user-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const userId = this.dataset.userId;
+            
+            // Don't reconnect if clicking the same user
+            if (selectedUserId === userId) return;
+            
+            selectedUserId = userId;
+            const username = this.querySelector('.text-sm').textContent.trim();
+            const userInitial = username.charAt(0).toUpperCase();
+            
+            // Update UI
+            document.getElementById('chatWith').textContent = `Chat with ${username}`;
+            document.getElementById('userStatus').textContent = 'Connecting...';
+            document.getElementById('selectedUserAvatar').innerHTML = userInitial;
+            document.getElementById('chatForm').classList.remove('hidden');
+            
+            // Highlight selected user
+            document.querySelectorAll('.user-item').forEach(el => {
+                el.classList.remove('bg-blue-50', 'dark:bg-blue-900');
+            });
+            this.classList.add('bg-blue-50', 'dark:bg-blue-900');
+            
+            // Load previous messages and connect WebSocket
+            loadMessages(userId);
+            connectWebSocket(userId);
+        });
+    });
+
+    function handleTypingStatus(data) {
+        const typingIndicator = document.getElementById('typingIndicator');
+        if (data.user_id !== '{{ request.user.id }}' && data.is_typing) {
+            typingIndicator.classList.remove('hidden');
+        } else {
+            typingIndicator.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('chatForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            try {
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'recipient_id': selectedUserId
+                }));
+                messageInput.value = '';
+                // Clear typing indicator after sending message
+                clearTimeout(typingTimeout);
+                sendTypingStatus(false);
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showToast('Failed to send message', 'error');
+            }
+        } else if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+            showToast('Not connected to chat', 'error');
+        }
+    });
+
+    // Typing indicator
+    document.getElementById('messageInput').addEventListener('input', function() {
+        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+        
+        clearTimeout(typingTimeout);
+        sendTypingStatus(true);
+        
+        typingTimeout = setTimeout(() => {
+            sendTypingStatus(false);
+        }, 2000);
+    });
+
+    function sendTypingStatus(isTyping) {
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN && selectedUserId) {
+            try {
+                chatSocket.send(JSON.stringify({
+                    'typing': isTyping,
+                    'recipient_id': selectedUserId
+                }));
+            } catch (error) {
+                console.error('Error sending typing status:', error);
+            }
+        }
+    }
+
+    function loadMessages(userId) {
+        document.getElementById('chatMessages').innerHTML = `
+            <div class="flex justify-center">
+                <div class="animate-pulse">
+                    <div class="bg-gray-200 dark:bg-gray-700 rounded-lg px-4 py-2">
+                        <p class="text-gray-500 dark:text-gray-400">Loading messages...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        fetch(`/api/messages/${userId}/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to load messages');
+                return response.json();
+            })
+            .then(data => {
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                
+                if (data.length === 0) {
+                    chatMessages.innerHTML = `
+                        <div class="flex justify-center">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-2">
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">
+                                    No messages yet. Start a conversation!
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    data.forEach(msg => {
+                        displayMessage(msg.content, msg.sender_id === '{{ request.user.id }}', msg.timestamp);
+                    });
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error loading messages:', error);
+                showToast('Error loading messages', 'error');
+                document.getElementById('chatMessages').innerHTML = `
+                    <div class="flex justify-center">
+                        <div class="bg-red-100 dark:bg-red-900 rounded-lg px-4 py-2">
+                            <p class="text-red-600 dark:text-red-200 text-sm">
+                                Failed to load messages. Please try again.
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+    }
+
+    function displayMessage(message, isSent, timestamp = null) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('flex', 'message-appear', isSent ? 'justify-end' : 'justify-start');
+        
+        const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        const maxWidth = 'max-w-[70%]';
+        const bgColor = isSent ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800';
+        const shadow = 'shadow-md';
+        
+        messageDiv.innerHTML = `
+            <div class="${maxWidth} ${bgColor} rounded-lg px-4 py-2 ${shadow}">
+                <p class="text-sm break-words">${message}</p>
+                <p class="chat-message-time text-right ${isSent ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}">${time}</p>
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Handle page visibility change
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && selectedUserId) {
+            connectWebSocket(selectedUserId);
+        }
+    });
+
+    // Prevent accidental page refresh/close
+    window.addEventListener('beforeunload', function(e) {
+        if (document.getElementById('messageInput').value.trim()) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('unload', function() {
+        if (chatSocket) {
+            chatSocket.close();
+        }
+    });
+</script>
+{% endblock %}

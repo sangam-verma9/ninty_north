@@ -1,0 +1,12 @@
+{% load static %}
+<nav class="fixed top-0 w-full bg-blue-500 text-white p-4 shadow-md z-10">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold">ChatApp</h1>
+        <ul class="flex space-x-4">
+            <li><a href="#" class="hover:underline">Home</a></li>
+            <li><a href="#" class="hover:underline">About</a></li>
+            <li><a href="#" class="hover:underline">Contact</a></li>
+            <li><a href="{% url 'accounts:logout' %}" class="hover:underline">Logout</a></li>
+        </ul>
+    </div>
+</nav>
